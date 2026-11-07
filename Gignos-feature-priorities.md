@@ -1,72 +1,106 @@
 # Gignos iOS — feature priorities
 
-Prepared October 18, 2026 • Companion to [Gignos-requirements-for-Eli.md](Gignos-requirements-for-Eli.md)
+Prepared October 18, 2026 • Revised November 7, 2026 • Companion to [Gignos-requirements-for-Eli.md](Gignos-requirements-for-Eli.md)
 
 ## Purpose
 
-The requirements document defines *what* version 1 must do: website parity, native design, performance, release, and maintenance. This document sets the *order* in which to build it and adds the native iOS features that should follow parity. Where they differ, the requirements document still governs acceptance; this one governs sequencing. Section references (§) point to the requirements document.
+Eli's first priority is a complete native experience. Users must be able to finish the agreed Gignos browsing and research journeys inside the app. **The app must never hand them off to the Gignos website**, including for secondary pages, unsupported media, errors, or missing features.
 
-Priorities come from a review of gignos.com, the live API, and Eli's working repository (`ehunter831/GignosIOS`, as of its October 5 commits).
+The requirements document defines acceptance; this document sets build order. This revision removes the former website-fallback allowances. Optional native features follow parity.
 
-**Repository:** Eli's repository `ehunter831/GignosIOS` is the working repository for the app. This is an approved change to §5, which named the Gignos team repository.
+**Working repository:** `ehunter831/GignosIOS`. Baseline: [main at 89649d4](https://github.com/ehunter831/GignosIOS/tree/89649d47964c8febf6f19f69a8677442c99617be), reviewed November 7, 2026. Findings below are from source inspection, not a fresh device test.
 
-## Where the app stands
+## Eli's itemized focus areas
 
-Done or well underway in Eli's repository, beyond the original sample:
-
-- On-device SQLite cache (GRDB) with full-text search. Shows cached rows immediately, syncs in the background, and keeps cached data when a refresh fails. This addresses much of §4's loading concern.
-- Cache tests, an app icon, test-target signing, and an Xcode Cloud manifest.
-
-Largest remaining gaps against the website:
-
-| Gap | Website | App today | Data already in the API |
+| Priority | Area | Current gap | Required result |
 | --- | --- | --- | --- |
-| Images | Hero photos, thumbnails, galleries | No images anywhere | `heroMediaPreview` on records; `relatedObjects.medias[].url` on details |
-| Home | Mission, recently added sites, learn/research cards | Opens on an A–Z list | `updatedAt`, hero images |
-| Site filters | Type, function, classification, country, time period, age range | Type and country only | `siteFunction`, `dateRangeMin`/`dateRangeMax`, relationships |
-| Video and media | e.g. 4 videos on Laetoli Site G | None | `medias[].fileType`, `embedLinkCode`, `sourceUrl` |
-| Classification hierarchy | Taxonomic browsing | Flat list of 86 | `ancestry`, `rank` |
-| Universal Links | n/a | None | Website must serve the AASA file |
+| P0.0 | Remove website handoffs | “View on Gignos,” “Full entry on Gignos,” website menus, About links, and generic description-link handling | Every Gignos action resolves to native navigation; errors recover in-app |
+| P0.1 | Images | System-symbol rows; no catalog photos or media model | Thumbnails, hero images, galleries, captions/credits, image caching |
+| P0.2 | Native Home | Sites opens directly on the catalog | Introduction, search, map, recent sites, learning and research/contact entries |
+| P0.3 | Search/filter/sort parity | Only type/country filters and name/country sorts | Function, classification, period, age filters/sort, taxonomy filters, correct complete counts |
+| P0.4 | Media | No video/audio/model viewers in the reviewed details | Required media works inside the app; no website fallback |
+| P0.5 | Universal Links | Entitlement exists, but no incoming router; Debug/Release bundle IDs differ | Outside links open the correct native screen; production association and device tests pass |
+| P0.6 | Classification hierarchy | Flat list | Parent/child browsing with native records and related sites |
+| P0.7 | Rich details and citations | HTML becomes plain text; extracted links use generic URL opening | Structured content, contextual references, complete native related-record journeys |
+| P0.8 | Secondary content | About, News, Contact, Q&A, Privacy point to web pages | Native screens and any agreed public forms |
+| P0.9 | Journey and release verification | Map, saved records, and cache exist; full acceptance is unverified | Consistent navigation, offline text, migrations, accessibility, iPad and physical-device evidence |
 
-## Priority 0: version 1 parity, in build order
+Preserve the existing SQLite/GRDB cache, full-text search, native catalogs/details, related-record navigation, map, sharing, and saved records. Extend this foundation rather than treating it as missing.
 
-These are required by §2 and gate release. Build them in this order. Each one is either the biggest visible gap or unblocks the next.
+## Priority 0: version 1 parity
 
-### P0.1 Images
-Thumbnails in catalog rows, a hero image on every record that has one, and a swipeable gallery of image media on detail pages. Show the image source and credit where the API supplies them (`heroMediaSourceNames`). Load lazily, size to the display, and cache (§4). A failed image must never block reading the record.
+Start P0.0 and the P0.5 account/domain coordination immediately. Build images, Home, and filters next. Complete rich details, media, secondary content, and hierarchy before release. Run P0.9 throughout. Each item has specific acceptance criteria in the linked requirements section.
 
-*Why first:* the most visible difference from the website, the data already exists, and Home (P0.2) depends on it.
+### P0.0 Remove every Gignos website handoff
+
+Replace the catalog/detail website actions, website menu, and About website links. Route internal/relative links and citations through a shared native resolver. This rule also applies to Home cards, saved records, media failures, unknown routes, and offline/error states.
+
+A Safari sheet or full-page web view of Gignos does not count as native parity. Share/copy may still produce canonical HTTPS URLs without navigating away. API/media requests are normal data loading. A contained media or third-party reference viewer must not replace a Gignos screen or trigger automatic external navigation.
+
+**Done when:** every app journey and error path stays inside the native experience; regression coverage includes the existing exit points. See [§2.1](Gignos-requirements-for-Eli.md#21-keep-every-gignos-journey-native--first-priority).
+
+### P0.1 Photos and galleries
+
+Extend the record model, decoder, and persistence for hero/gallery media. Add thumbnails, hero images, swipe/zoom galleries, captions/credits, lazy loading, sizing, caching, and useful missing-image states. A failed image never blocks reading.
+
+**Done when:** records with multiple images, missing images, failed requests, and cached revisits all work. See [§2.3](Gignos-requirements-for-Eli.md#23-photos-hero-images-and-galleries).
 
 ### P0.2 Native Home
-The opening page inside Sites (§2, placement to confirm): the Gignos introduction, search entry, map entry, and **Recently added sites** as photo cards. Link the *Learn about human origins* and *Research opportunities* content natively where it exists as records, otherwise to the website.
 
-*Why:* it's the first impression for new users and App Store review. The current A–Z list says nothing about what Gignos is.
+Add the introduction, search and map entries, recently added photo cards, and learning/research entries. Learning leads to native exploration; research leads to native information/contact. Confirm Home placement inside Sites and the backend's “recently added” definition. Do not substitute `updatedAt` for creation date without confirmation.
 
-*Dependency:* confirm with the backend how the website chooses "recently added" (creation date vs. `updatedAt`) instead of guessing.
+**Done when:** a new user can discover content and complete these paths without a website exit. See [§2.2](Gignos-requirements-for-Eli.md#22-native-home-and-discovery).
 
-### P0.3 Full Sites filter and sort parity
-Add site function, classification, time period, and age range (min/max BP) to the existing type and country filters. Add sort by age. Add taxonomic filters to Classifications (§2). The full catalog is now cached locally, so this is mostly UI work, but combination semantics must match the website. Verify them during the parity audit.
+### P0.3 Full search, filter, and sort parity
 
-*Why:* searching and filtering is the core research task, and "everything older than 40,000 years in Iberia" can't be done in the app today.
+Add site function, classification, time period, age-range controls and age sorting, plus applicable taxonomic filters. Audit all five catalogs. Extend typed data, relationships, SQLite queries/indexes, and migrations; the current cache does not make this solely UI work.
 
-### P0.4 Video and other media
-Inventory media types across the catalog (§2). Play YouTube and other video embeds in a native or embedded player. Show a clear "Open on website" fallback for anything unsupported. Include an inventory of 3D model formats, which P2.2 needs.
+**Done when:** tested queries match intended website semantics and complete record sets, including age boundaries, unknown dates, combined filters, resets, counts, and map/list consistency. See [§2.4](Gignos-requirements-for-Eli.md#24-complete-catalogs-search-filters-and-sorting).
 
-### P0.5 Universal Links: start coordination now
-The code is modest. The lead time is not: it needs Eli's Apple Developer account and production app ID, plus an `apple-app-site-association` file served from gignos.com (§2). **Start the account and website work in parallel with P0.1**, so it doesn't become the last blocker before release.
+### P0.4 Video, audio, and other media
+
+Inventory actual formats/providers and rights. Implement native players or contained item-level embeds, with accessible controls and a clear native return path. Required basic model viewing belongs here; optional AR placement remains P2.2.
+
+**Done when:** each required type works in-app and failure/offline states preserve the record. An unavailable message cannot stand in for an unimplemented required viewer. See [§2.6](Gignos-requirements-for-Eli.md#26-video-audio-and-embedded-media).
+
+### P0.5 Universal Links — start coordination now
+
+Universal Links let a normal Gignos HTTPS link, opened from outside the app, take the user directly to its native content when iOS/user choice permits. People without the app can use the same shared URL on the website. Internal app navigation must resolve directly to native screens; it must never open a browser hoping to return to the app.
+
+Eli owns the signed app identity, entitlement, URL router, and tests. The website owner deploys the matching AASA association file. An entitlement alone does not complete the feature. Resolve the current Debug `com.gignos.ios` / Release `com.ggignos.ios` difference before configuring production association.
+
+**Done when:** the route matrix, production association, cold/warm launches, correct tabs/details, numeric source IDs, offline/error handling, and physical-device tests pass. See the full definition, ownership, route patterns, and test plan in [§2.9](Gignos-requirements-for-Eli.md#29-universal-links--bring-users-into-the-app), with [Apple's overview](https://developer.apple.com/documentation/xcode/allowing-apps-and-websites-to-link-to-your-content).
 
 ### P0.6 Classification hierarchy
-Present classifications as a tree from the `ancestry` field (e.g. genus → species), with each node linking to its record and related sites.
 
-### Release-gate work that runs alongside P0
-Not features, but they run alongside and are required before release: accessibility and iPad pass (§3), performance measurement against the §4 targets, the parity checklist (§2), and device testing (§5).
+Retain ancestry/parent relationships and rank in the model. Add hierarchy browsing, node details, related sites, and appropriate filters without inventing missing taxonomy.
 
-## Priority 1: cheap native wins for version 1
+**Done when:** users can navigate multiple levels and return to the same hierarchy position. See [§2.8](Gignos-requirements-for-Eli.md#28-classification-hierarchy).
 
-Low cost, mostly built on P0 work, and they help with App Store guideline 4.2 (an app must offer more than a repackaged website). Include them in version 1 if the schedule allows. Otherwise make them the first update.
+### P0.7 Rich details, citations, and relationships
 
-### P1.1 Spotlight and Handoff
-Index cached records so a search for "Lascaux" in iOS Search opens the app's record. Advertise the current record as an `NSUserActivity`, so a page open in Safari on a Mac hands off to the iPhone and back. Shares routing with P0.5.
+Preserve meaningful rich text and contextual reference markers. Route citations and internal description links natively. Verify the site → classification/period/culture → related site and site → source journeys across all five catalogs.
+
+**Done when:** required descriptions, metadata, provenance, authors, and references are available and usable without “full entry” website links. See [§2.5](Gignos-requirements-for-Eli.md#25-rich-details-citations-and-related-record-journeys).
+
+### P0.8 Native secondary pages and contact
+
+Replace web destinations for About, News/articles, Contact, Q&A, and Privacy. Include native research information/contact. Agree content feeds and any public form integrations with the backend/content owners. Record excluded flows explicitly and omit their actions rather than sending users to the website.
+
+**Done when:** every secondary destination and included form completes in-app. See [§2.7](Gignos-requirements-for-Eli.md#27-native-secondary-information-and-contact).
+
+### P0.9 Complete-journey and release verification
+
+Verify map/list consistency, preserved tab/search/scroll state, saved text across restarts/upgrades, cache migrations, partial-data labeling, and offline/failed-refresh recovery. Run accessibility/iPad/device checks and performance measurements alongside implementation. Maintain the parity checklist with acceptance evidence.
+
+**Done when:** all required journeys pass and no app task hands off to Gignos web content. See [§2.10](Gignos-requirements-for-Eli.md#210-map-saved-records-offline-behavior-and-navigation) and requirements §§3–8.
+
+## Priority 1: optional native additions after parity
+
+These build on P0. Include them in version 1 only after required parity is complete and if the schedule allows; otherwise make them the first update.
+
+### P1.1 Spotlight
+Index cached records so a search for "Lascaux" in iOS Search opens the native record. Reuse the P0.5 router. App-to-browser Handoff is excluded; it must not reintroduce a website exit.
 
 ### P1.2 Offline trip download
 Builds on the existing cache: "Download this region" stores the text plus hero images for every site in a country or region before a trip. Many sites are remote with poor coverage. Full offline video stays out of scope (§9).
@@ -98,30 +132,32 @@ A scrubbable timeline from about 3.6 million to 10,000 years BP. As you drag, th
 - **Personal notes and collections** on saved records (e.g. "Neanderthal sites in Iberia"), with Apple Pencil markup on iPad. Local only. Sync is out of scope (§9).
 - **New-site notifications.** Needs a backend signal or push infrastructure. Revisit after launch.
 
-## Stays on the website (record as approved exceptions in the parity checklist)
+## Scope exclusions do not create website exits
 
-- Contributing, editing, and researcher or institution submissions ("Research opportunities"). No accounts in the app (§9).
-- Dense comparison tables, exports, and multi-tab research.
-- About, News, Q&A, Contact, Privacy Policy, and newsletter signup (in-app links).
-- Search-engine discovery and sharing with people who don't have the app. Universal Links connect the two rather than replacing the web.
+New accounts, editorial/admin tools, and cross-device sync remain outside assumed version 1 scope. Inventory public contribution/submission, newsletter, comparison, and export tasks during discovery; any exclusion needs an explicit decision in the parity checklist. These are not blanket approved exceptions.
+
+About, News, Contact, Q&A, and Privacy are native requirements. A deferred task must not appear as a button that sends the user to the website. Canonical website pages remain available for external discovery and recipients without the app; that does not authorize an outgoing app handoff.
 
 ## Long-lead items for Derek
 
 Start these now. They depend on people and accounts, not code.
 
-1. **Apple Developer account and production app ID** (Eli). Blocks Universal Links, TestFlight, and the AASA file.
-2. **AASA file on gignos.com** (website owner). See P0.5.
-3. **Backend repository access** for Eli (`gignos/gignos-api`). Confirms search and filter semantics, the "recently added" definition, media types, and enum meanings (§5).
+1. **Apple Developer account and verified production app identity** (Eli). Resolve the Debug/Release bundle-ID discrepancy; this identity must match the AASA file and signed release.
+2. **AASA file on gignos.com** (website owner, coordinated by Eli). See P0.5 and requirements §2.9.
+3. **Backend repository access** for Eli (`gignos/gignos-api`). Confirms search/filter semantics, the "recently added" definition, media types, enum meanings, and native secondary-content/form data sources (§5).
 4. **Media and 3D rights review** before images, video, and models ship in a distributed app.
 
 ## Housekeeping
 
 - `README.md` and `docs/API.md` in Eli's repository still say there is no disk catalog cache. Update them to describe the SQLite cache.
-- The requirements document says the sample has no third-party dependencies. The app now uses GRDB. Record that as an approved dependency or revisit it.
-- **Toolchain:** GRDB 7.11 requires Xcode 16.3+ (Swift 6.1). Agree on a minimum Xcode version and document it in the README, so every machine and Xcode Cloud build the same way.
+- The working app uses GRDB. Record the dependency decision and keep dependency/cache documentation current.
+- **Toolchain:** verify the checked-in GRDB version's toolchain requirements and document one supported Xcode/Swift setup for local development and Xcode Cloud.
 
 ## Decisions needed
 
 1. Confirm Home as the opening page inside Sites (P0.2).
 2. Approve P1 items for version 1 or the first update.
-3. Approve the P2 guardrails for location features before design starts.
+3. Confirm secondary-content feeds, included public forms, required media viewers, and owners for backend/domain dependencies.
+4. Approve the P2 guardrails for location features before design starts.
+
+The no-website-handoff rule is a requirement, not an open decision.
